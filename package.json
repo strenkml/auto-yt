@@ -1,0 +1,24 @@
+{
+  "name": "auto-youtube-dl",
+  "version": "1.0.0",
+  "description": "Manages Youtube-dl downloads so that your content stays uo to date",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strenkml/auto-youtube-dl.git"
+  },
+  "author": "Matt Strenk",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/strenkml/auto-youtube-dl/issues"
+  },
+  "homepage": "https://github.com/strenkml/auto-youtube-dl#readme",
+  "dependencies": {
+    "commander": "^8.1.0",
+    "enmap": "^5.8.7",
+    "prompt": "^1.2.0"
+  }
+}

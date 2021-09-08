@@ -1,0 +1,9 @@
+version: "3.9" # optional since v1.27.0
+services:
+  server:
+    build: .
+    volumes:
+      # - /home/strenkml/AutoYT/downloads:/downloads
+      # - /home/strenkml/AutoYT/config:/config
+      - E:\Documents\My Documents\Programming\AutoYT\downloads:/downloads
+      - E:\Documents\My Documents\Programming\AutoYT\config:/config
