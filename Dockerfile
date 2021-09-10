@@ -15,11 +15,8 @@ RUN chmod a+rx /usr/local/bin/youtube-dl
 # Install ffmpeg and atomicparsley
 RUN apt update && apt install -y ffmpeg atomicparsley
 
-# Setup /config directory
-RUN mkdir -p /config/settings /config/sources
-
 # Bundle app source
 COPY . .
 
-# CMD [ "node", "cli.js", "-a -e"]
+# CMD [ "node", "server.js"]
 CMD ["tail", "-f", "/dev/null"]

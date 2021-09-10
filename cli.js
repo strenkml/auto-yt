@@ -6,12 +6,10 @@ const sourceTemplate = require("./templates/source.json");
 
 const settings = new Enmap({
   name: "settings",
-  dataDir: "/config/settings",
 });
 
 const sources = new Enmap({
   name: "sources",
-  dataDir: "/config/sources",
 });
 
 program.version("0.0.1");
