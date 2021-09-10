@@ -1,6 +1,6 @@
 const Enmap = require("enmap");
 const { program } = require("commander");
-const prompt = require("prompt");
+const prompt = require("readline-sync");
 
 const sourceTemplate = require("./templates/source.json");
 
@@ -21,23 +21,19 @@ program.command("add").description("Add a New Video Source").action(addSource);
 program
   .command("list")
   .description("List the Video Source")
-  .action(() => {
-    console.log("Listing sources");
-  });
+  .action(listSources);
+
+program.command("edit").description("Edit a Video Source").action(editSource);
 
 program
-  .command("edit")
-  .description("Edit a Video Source")
-  .action(() => {
-    console.log("Editing source");
-  });
+  .command("info")
+  .description("Get info for a Video Source")
+  .action(sourceInfo);
 
 program
   .command("delete")
   .description("Delete Video Source")
-  .action(() => {
-    console.log("Deleting source");
-  });
+  .action(deleteSource);
 
 program.option(
   "--set-cookies <path>",
@@ -45,217 +41,6 @@ program.option(
 );
 
 program.parse();
-
-console.log(program.opts());
-
-function addSource() {
-  let newSource = {
-    properties: {
-      name: {
-        description: "Enter the name of the video source",
-        type: "string",
-        required: true,
-      },
-      sourceUrl: {
-        description: "Enter the URL of a channel, playlist, or video",
-        type: "string",
-        required: true,
-      },
-      sourceType: {
-        description:
-          "Enter the type of the video source. Channel, playlist, or video",
-        pattern: /^channel$|^video$|^playlist$/,
-        message:
-          "Invalid selection!  Must be either channel, playlist, or video",
-        type: "string",
-        required: true,
-      },
-      metadata: {
-        description:
-          "Select one of the options below for the type of metadata to use:\n(1) Title\n(2) Plex",
-        type: "integer",
-        pattern: /^[1-2]$/,
-        message: "Must be a number between 1 and 2",
-        required: true,
-        default: 2,
-      },
-    },
-  };
-
-  let occurrence = {
-    properties: {
-      occurrence: {
-        description:
-          "Select one of the options below for the type of download it is:\n(1) one time download\n(2) should the videos be grabbed on a schedule",
-        type: "integer",
-        pattern: /^[1-2]$/,
-        message: "Must be a number between 1 and 2",
-        required: true,
-      },
-    },
-  };
-
-  let configuratorType = {
-    properties: {
-      configuratorType: {
-        description:
-          "Select one of the options below for setting a schdule:\n(1) Use Configurator\n(2) Cron format",
-        type: "integer",
-        pattern: /^[1-2]$/,
-        message: "Must be a number between 1 and 2",
-        required: true,
-        default: 1,
-      },
-    },
-  };
-
-  let timeConfigurator = {
-    properties: {
-      timeTable: {
-        description:
-          "Select an option below for how often the videos should be grabbed:\n(1) Montly\n(2) Weekly\n(3) Daily\n(4) Hourly",
-        type: "integer",
-        pattern: /^[1-4]$/,
-        message: "Invalid selection! Must be either 1, 2, 3, or 4",
-        required: true,
-      },
-    },
-  };
-
-  let monthly = {
-    properties: {
-      dayOfMonth: {
-        description: "Enter the day of the month to check for new videos",
-        pattern: /^[1-31]$/,
-        type: "integer",
-        message: "Invalid day of the month!",
-        required: true,
-      },
-    },
-  };
-
-  let weekly = {
-    properties: {
-      dayOfweek: {
-        description:
-          "Enter the day of the week (a number 1-7) to check for new videos.",
-        pattern: /^[1-7]$/,
-        type: "integer",
-        message: "Invalid day of the week!",
-        required: true,
-      },
-    },
-  };
-
-  let daily = {
-    properties: {
-      hourOfDay: {
-        description:
-          "Enter the hour of the day (a number 0-23) to check for new videos",
-        pattern: /^[0-23]$/,
-        type: "integer",
-        message: "Invalid hour of the day!",
-        required: true,
-      },
-    },
-  };
-
-  let hourly = {
-    properties: {
-      minuteOfHour: {
-        description:
-          "Enter the minute of the hour (a number 0-59) to check for new videos",
-        pattern: /^[0-59]$/,
-        type: "integer",
-        message: "Invalid minute of the hour!",
-        required: true,
-      },
-    },
-  };
-
-  let cronFormat = {
-    properties: {
-      cron: {
-        description: "Enter a schedule in the cron format:",
-        pattern:
-          /(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)|(^((?!\*-)((\d+,)+\d+|([\d\*]+(\/|-)\d+)|\d+|(?<!\d)\*(?!\d)) ?){5,7})/,
-        message: "Invalid cron format!",
-        type: "string",
-        required: true,
-      },
-    },
-  };
-
-  prompt.start();
-
-  var dayOfMonth = null;
-  var dayOfWeek = null;
-  var hour = null;
-  var minute = null;
-
-  var currentKey = null;
-  prompt.get(newSource, (err, sourceRes) => {
-    currentKey = sources.autonum;
-    sources.set(currentKey, sourceTemplate);
-    sources.set(currentKey, newSource.name, "name");
-    sources.set(currentKey, newSource.sourceUrl, "url");
-    sources.set(currentKey, newSource.sourceType, "type");
-    sources.set(currentKey, newSource.metadata, "metadata");
-    if (sourceRes.sourceType != "video") {
-      prompt.get(occurrence, (err, occurrenceRes) => {
-        if (occurrenceRes.occurrence == 2) {
-          prompt.get(configuratorType, (err, configuratorTypeRes) => {
-            if (configuratorTypeRes.configuratorType == 1) {
-              prompt.get(timeConfigurator, (err, timeConfiguratorRes) => {
-                switch (timeConfiguratorRes.timeTable) {
-                  case 1:
-                    prompt.get(monthly, (err, monthlyRes) => {
-                      dayOfMonth = monthlyRes.dayOfMonth;
-                    });
-                    prompt.get(daily, (err, dailyRes) => {
-                      hour = dailyRes.hourOfDay;
-                    });
-                    prompt.get(hourly, (err, hourslyRes) => {
-                      minute = hourslyRes.minuteOfHour;
-                    });
-                    break;
-                  case 2:
-                    prompt.get(weekly, (err, weeklyRes) => {
-                      dayOfWeek = weeklyRes.dayOfWeek;
-                    });
-                  case 3:
-                    prompt.get(daily, (err, dailyRes) => {
-                      hour = dailyRes.hourOfDay;
-                    });
-                  case 4:
-                    prompt.get(hourly, (err, hourslyRes) => {
-                      minute = hourslyRes.minuteOfHour;
-                    });
-                }
-                sources.set(
-                  currentKey,
-                  convertToCron({
-                    dayOfMonth: dayOfMonth,
-                    dayOfWeek: dayOfWeek,
-                    hourOfDay: hour,
-                    minuteOfHour: minute,
-                  }),
-                  "cron"
-                );
-              });
-            } else {
-              prompt.get(cronFormat, (err, format) => {
-                sources.set(currentKey, format, "cron");
-              });
-            }
-          });
-        } else {
-          sources.set(currentKey, "no", "cron");
-        }
-      });
-    }
-  });
-}
 
 function convertToCron(data) {
   var month = data.dayOfMonth || "*";
@@ -265,3 +50,182 @@ function convertToCron(data) {
 
   return `${minute} ${hour} ${month} * ${week}`;
 }
+
+function addSource() {
+  // TODO: Check if the name already exists
+  var name = prompt.question(
+    "What is the name of the video source (This will be used as the folder name)? "
+  );
+
+  // TODO: Add validation to the url and check if the URL already exists
+  var url = prompt.question(
+    "What is the url of the channel, playlist, or video? "
+  );
+
+  // TODO: Pull this information automatically from the URL
+  var typeChoices = ["Channel", "Playlist", "Video"];
+  var typeIndex = prompt.keyInSelect(
+    typeChoices,
+    "What type is the video source? "
+  );
+  var type = typeChoices[typeIndex];
+
+  var metadataChoices = ["Title", "Plex", "Custom"];
+  var metadataIndex = prompt.keyInSelect(
+    metadataChoices,
+    "What metadata type should be used? ",
+    { defaultInput: 2 }
+  );
+
+  var customMetadata = null;
+  if (metadataIndex == 2) {
+    customMetadata = prompt.question(
+      "Enter a custom template (https://github.com/ytdl-org/youtube-dl#output-template): "
+    );
+  }
+  var metadata = metadataChoices[metadataIndex];
+
+  var cronFormat = null;
+  if (typeIndex != 2) {
+    var frequencyChoices = ["One time", "Use scheduler"];
+    var frequencyIndex = prompt.keyInSelect(
+      frequencyChoices,
+      "How often should the videos be downloaded? ",
+      { defaultInput: 2 }
+    );
+
+    if (frequencyIndex == 1) {
+      var timingMethodChoice = [
+        "Basic Timing Configurator",
+        "Custom (cron format)",
+      ];
+      var timingMethodIndex = prompt.keyInSelect(
+        timingMethodChoice,
+        "How would you like the configure the scheduler? ",
+        { defaultInput: 1 }
+      );
+
+      if (timingMethodIndex == 0) {
+        var occurrenceChoices = ["Monthly", "Weekly", "Daily", "Hourly"];
+        var occurrenceIndex = prompt.keyInSelect(
+          occurrenceChoices,
+          "How often would you like to check for new videos? "
+        );
+
+        switch (occurrenceIndex) {
+          case 0:
+            var dayOfMonth = prompt.question(
+              "What day of the month should new videos be checked for (1-31)? ",
+              { limit: /^([1-9]|[12][0-9]|3[01])$/ }
+            );
+            var hourOfDay = prompt.question(
+              "What hour of the day should new videos be checked for (0-23)? ",
+              { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
+            );
+            var minuteOfHour = prompt.question(
+              "What minute of the hour should new videos be checked for (0-59)? ",
+              { limit: /^([0-5]{0,1}[0-9])$/ }
+            );
+            break;
+          case 1:
+            var dayOfWeek = prompt.question(
+              "What day of the week should new videos be checked for (1-7)? ",
+              { limit: /^[1-7]$/ }
+            );
+          case 2:
+            var hourOfDay = prompt.question(
+              "What hour of the day should new videos be checked for (0-23)? ",
+              { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
+            );
+          case 3:
+            var minuteOfHour = prompt.question(
+              "What minute of the hour should new videos be checked for (0-59)? ",
+              { limit: /^([0-5]{0,1}[0-9])$/ }
+            );
+        }
+        cronFormat = convertToCron({
+          dayOfMonth: dayOfMonth,
+          dayOfWeek: dayOfWeek,
+          hourOfDay: hourOfDay,
+          minuteOfHour: minuteOfHour,
+        });
+      } else {
+        cronFormat = prompt.question(
+          "In cron format, enter a custom schedule: ",
+          {
+            limit:
+              /(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)|(^((?!\*-)((\d+,)+\d+|([\d\*]+(\/|-)\d+)|\d+|(?<!\d)\*(?!\d)) ?){5,7})/,
+          }
+        );
+      }
+    } else {
+      cronFormat = "no";
+    }
+  } else {
+    cronFormat = "no";
+  }
+
+  var currentKey = sources.autonum;
+  sources.set(currentKey, sourceTemplate);
+  sources.set(currentKey, name, "name");
+  sources.set(currentKey, url, "url");
+  sources.set(currentKey, type, "type");
+  sources.set(currentKey, metadata, "metadata");
+  sources.set(currentKey, cronFormat, "cron");
+  if (customMetadata != null) {
+    sources.set(currentKey, customMetadata, "customMetadata");
+  }
+
+  console.log(sources.get(currentKey));
+}
+
+function listSources() {
+  var values = sources.array();
+
+  values.forEach((item) => {
+    console.log(`- ${item.name}`);
+  });
+}
+
+// TODO: Add the ability to edit by name
+function editSource() {
+  var keys = sources.keyArray();
+  var values = sources.array();
+
+  var names = [];
+  values.forEach((item) => {
+    names.push(item.name);
+  });
+
+  var selectedSourceIndex = prompt.keyInSelect(
+    names,
+    "Select a source to edit: "
+  );
+  var source = sources.get(keys[selectedSourceIndex]);
+
+  var editChoices = ["Name", "URL", "Metadata Type", "Schedule"];
+  var editIndex = prompt.keyInSelect(
+    editChoices,
+    "Select a video source setting to change: "
+  );
+}
+
+// TODO: Add the ability to delete by name
+// TODO: Add a confirmation for deleting a source
+function deleteSource() {
+  var keys = sources.keyArray();
+  var values = sources.array();
+
+  var names = [];
+  values.forEach((item) => {
+    names.push(item.name);
+  });
+
+  var selectedSourceIndex = prompt.keyInSelect(
+    names,
+    "Select a source to delete: "
+  );
+  sources.delete(keys[selectedSourceIndex]);
+}
+
+function sourceInfo() {}

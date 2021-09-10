@@ -3,7 +3,7 @@ services:
   server:
     build: .
     volumes:
-      # - /home/strenkml/AutoYT/downloads:/downloads
-      # - /home/strenkml/AutoYT/config:/config
-      - E:\Documents\My Documents\Programming\AutoYT\downloads:/downloads
-      - E:\Documents\My Documents\Programming\AutoYT\config:/config
+      - /home/strenkml/AutoYT/downloads:/downloads
+      - /home/strenkml/AutoYT/config:/config
+      # - E:\Documents\My Documents\Programming\AutoYT\downloads:/downloads
+      # - E:\Documents\My Documents\Programming\AutoYT\config:/config
