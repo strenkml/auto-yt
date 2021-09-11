@@ -15,6 +15,9 @@ RUN chmod a+rx /usr/local/bin/youtube-dl
 # Install ffmpeg and atomicparsley
 RUN apt update && apt install -y ffmpeg atomicparsley
 
+# Make log directory
+RUN mkdir -p /var/log/autoyt
+
 # Bundle app source
 COPY . .
 

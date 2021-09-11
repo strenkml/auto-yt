@@ -1,11 +1,18 @@
 const Enmap = require("enmap");
 const { program } = require("commander");
 const prompt = require("readline-sync");
+const fs = require("fs");
 
-const sourceTemplate = require("./templates/source.json");
+const sourceTemplate = require("./defaults/source.json");
+const config = require("./defaults/config.json");
+
+const types = ["Channel", "Playlist", "Video"];
 
 const settings = new Enmap({
   name: "settings",
+  autoEnsure: {
+    cookiesFile: "cookies.txt",
+  },
 });
 
 const sources = new Enmap({
@@ -50,29 +57,22 @@ function convertToCron(data) {
 }
 
 function addSource() {
-  // TODO: Check if the name already exists
   var name = prompt.question(
-    "What is the name of the video source (This will be used as the folder name)? "
+    "What is the name of the video source (This will be used as the folder name)? ",
+    { limit: checkNewName }
   );
 
-  // TODO: Add validation to the url and check if the URL already exists
   var url = prompt.question(
-    "What is the url of the channel, playlist, or video? "
+    "What is the url of the channel, playlist, or video? ",
+    { limit: checkNewUrl }
   );
 
-  // TODO: Pull this information automatically from the URL
-  var typeChoices = ["Channel", "Playlist", "Video"];
-  var typeIndex = prompt.keyInSelect(
-    typeChoices,
-    "What type is the video source? "
-  );
-  var type = typeChoices[typeIndex];
+  var type = getSourceTypeFromUrl(url);
 
   var metadataChoices = ["Title", "Plex", "Custom"];
   var metadataIndex = prompt.keyInSelect(
     metadataChoices,
-    "What metadata type should be used? ",
-    { defaultInput: 2 }
+    "What metadata type should be used? "
   );
 
   var customMetadata = null;
@@ -84,12 +84,11 @@ function addSource() {
   var metadata = metadataChoices[metadataIndex];
 
   var cronFormat = null;
-  if (typeIndex != 2) {
+  if (type != types[2]) {
     var frequencyChoices = ["One time", "Use scheduler"];
     var frequencyIndex = prompt.keyInSelect(
       frequencyChoices,
-      "How often should the videos be downloaded? ",
-      { defaultInput: 2 }
+      "How often should the videos be downloaded? "
     );
 
     if (frequencyIndex == 1) {
@@ -99,8 +98,7 @@ function addSource() {
       ];
       var timingMethodIndex = prompt.keyInSelect(
         timingMethodChoice,
-        "How would you like the configure the scheduler? ",
-        { defaultInput: 1 }
+        "How would you like the configure the scheduler? "
       );
 
       if (timingMethodIndex == 0) {
@@ -227,3 +225,61 @@ function deleteSource() {
 }
 
 function sourceInfo() {}
+
+function checkNewName(name) {
+  // Check if there is already a folder in the download directory with the same name
+  try {
+    if (!fs.existsSync(`${config.downloadDir}/${name}`)) {
+      console.log(
+        "An directory with this name already exists in the download directory!"
+      );
+      return false;
+    }
+  } catch (e) {
+    console.log("An error has occurred, please try again.");
+    return false;
+  }
+
+  // Check if there is a source that has the same name
+  if (sources.find((val) => val.name === name)) {
+    console.log("A video source with the same name already exists");
+    return false;
+  }
+  return true;
+}
+
+function checkNewUrl(url) {
+  // Check if the URL is valid
+  let regex =
+    /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$||^https?:\/\/(www\.)?youtube\.com\/playlist\?list=\S+$||^https?:\/\/(www\.)?youtube\.com\/watch\?v=\S+$/;
+  if (!url.match(regex)) {
+    console.log("Invalid URL!");
+    return false;
+  }
+
+  // Check if there is a source that has the same url
+  if (sources.find((val) => val.url === url)) {
+    console.log("A video source with the same url already exists");
+    return false;
+  }
+  return true;
+}
+
+function getSourceTypeFromUrl(url) {
+  let channelRegex = /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$/;
+  let playlistRegex = /^https?:\/\/(www\.)?youtube\.com\/playlist\?list=\S+$/;
+  let videoRegex = /^https?:\/\/(www\.)?youtube\.com\/watch\?v=\S+$/;
+
+  if (url.match(channelRegex)) {
+    return types[0];
+  }
+
+  if (url.match(playlistRegex)) {
+    return types[1];
+  }
+
+  if (url.match(videoRegex)) {
+    return types[2];
+  }
+  return null;
+}
