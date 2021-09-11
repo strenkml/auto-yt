@@ -1,4 +1,5 @@
 {
   "downloadDir": "/downloads",
-  "userConfigDir": "/config"
+  "userConfigDir": "/config",
+  "logDir": "/var/log/autoyt"
 }

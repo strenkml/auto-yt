@@ -75,6 +75,8 @@ function addSource() {
     "What metadata type should be used? "
   );
 
+  if (metadataIndex == -1) return;
+
   var customMetadata = null;
   if (metadataIndex == 2) {
     customMetadata = prompt.question(
@@ -91,6 +93,8 @@ function addSource() {
       "How often should the videos be downloaded? "
     );
 
+    if (frequencyIndex == -1) return;
+
     if (frequencyIndex == 1) {
       var timingMethodChoice = [
         "Basic Timing Configurator",
@@ -101,12 +105,16 @@ function addSource() {
         "How would you like the configure the scheduler? "
       );
 
+      if (timingMethodIndex == -1) return;
+
       if (timingMethodIndex == 0) {
         var occurrenceChoices = ["Monthly", "Weekly", "Daily", "Hourly"];
         var occurrenceIndex = prompt.keyInSelect(
           occurrenceChoices,
           "How often would you like to check for new videos? "
         );
+
+        if (occurrenceIndex == -1) return;
 
         switch (occurrenceIndex) {
           case 0:
@@ -197,6 +205,9 @@ function editSource() {
     names,
     "Select a source to edit: "
   );
+
+  if (selectedSourceIndex == -1) return;
+
   var source = sources.get(keys[selectedSourceIndex]);
 
   var editChoices = ["Name", "URL", "Metadata Type", "Schedule"];
@@ -204,6 +215,8 @@ function editSource() {
     editChoices,
     "Select a video source setting to change: "
   );
+
+  if (editIndex == -1) return;
 }
 
 // TODO: Add the ability to delete by name
