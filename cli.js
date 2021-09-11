@@ -2,6 +2,7 @@ const Enmap = require("enmap");
 const { program } = require("commander");
 const prompt = require("readline-sync");
 const fs = require("fs");
+const cron = require("node-cron");
 
 const sourceTemplate = require("./defaults/source.json");
 const config = require("./config.json");
@@ -157,8 +158,9 @@ function addSource() {
         cronFormat = prompt.question(
           "In cron format, enter a custom schedule: ",
           {
-            limit:
-              /(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)|(^((?!\*-)((\d+,)+\d+|([\d\*]+(\/|-)\d+)|\d+|(?<!\d)\*(?!\d)) ?){5,7})/,
+            limit: (input) => {
+              return cron.validate(input);
+            },
           }
         );
       }
