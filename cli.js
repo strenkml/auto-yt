@@ -4,7 +4,7 @@ const prompt = require("readline-sync");
 const fs = require("fs");
 
 const sourceTemplate = require("./defaults/source.json");
-const config = require("./defaults/config.json");
+const config = require("./config.json");
 
 const types = ["Channel", "Playlist", "Video"];
 
@@ -229,7 +229,7 @@ function sourceInfo() {}
 function checkNewName(name) {
   // Check if there is already a folder in the download directory with the same name
   try {
-    if (!fs.existsSync(`${config.downloadDir}/${name}`)) {
+    if (fs.existsSync(`${config.downloadDir}/${name}`)) {
       console.log(
         "An directory with this name already exists in the download directory!"
       );
@@ -251,7 +251,7 @@ function checkNewName(name) {
 function checkNewUrl(url) {
   // Check if the URL is valid
   let regex =
-    /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$||^https?:\/\/(www\.)?youtube\.com\/playlist\?list=\S+$||^https?:\/\/(www\.)?youtube\.com\/watch\?v=\S+$/;
+    /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$|^https?:\/\/(www\.)?youtube\.com\/channel\/\S+$|^https?:\/\/(www\.)?youtube\.com\/playlist\?list=\S+$|^https?:\/\/(www\.)?youtube\.com\/watch\?v=\S+$/;
   if (!url.match(regex)) {
     console.log("Invalid URL!");
     return false;
@@ -266,7 +266,8 @@ function checkNewUrl(url) {
 }
 
 function getSourceTypeFromUrl(url) {
-  let channelRegex = /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$/;
+  let channelRegex =
+    /^https?:\/\/(www\.)?youtube\.com\/c\/\S+$|^https?:\/\/(www\.)?youtube\.com\/channel\/\S+$/;
   let playlistRegex = /^https?:\/\/(www\.)?youtube\.com\/playlist\?list=\S+$/;
   let videoRegex = /^https?:\/\/(www\.)?youtube\.com\/watch\?v=\S+$/;
 
