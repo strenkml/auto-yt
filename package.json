@@ -18,6 +18,7 @@
   "homepage": "https://github.com/strenkml/auto-youtube-dl#readme",
   "dependencies": {
     "commander": "^8.1.0",
+    "deep-diff": "^1.0.2",
     "enmap": "^5.8.7",
     "node-cron": "^3.0.0",
     "readline-sync": "^1.4.10"

@@ -14,10 +14,12 @@ const settings = new Enmap({
   autoEnsure: {
     cookiesFile: "cookies.txt",
   },
+  dataDir: `${config.userConfigDir}/data`,
 });
 
 const sources = new Enmap({
   name: "sources",
+  dataDir: `${config.userConfigDir}/data`,
 });
 
 program.version("0.0.1");
