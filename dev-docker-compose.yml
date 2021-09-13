@@ -8,6 +8,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: pass
     ports:
       - 27017:27017
+    volumes:
+      - /home/strenkml/AutoYT/db:/data/db
   mongo-express:
     image: mongo-express
     restart: always

@@ -21,5 +21,5 @@ RUN mkdir -p /var/log/autoyt
 # Bundle app source
 COPY . .
 
-# CMD [ "node", "server.js"]
-CMD ["tail", "-f", "/dev/null"]
+CMD [ "node", "server.js"]
+# CMD ["tail", "-f", "/dev/null"]

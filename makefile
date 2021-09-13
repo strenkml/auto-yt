@@ -1,4 +1,5 @@
 docker-dev:
+	sudo rm -rf /home/strenkml/AutoYT/downloads; \
 	docker-compose -f dev-docker-compose.yml -p dev-auto-yt down && \
 	docker-compose -f dev-docker-compose.yml -p dev-auto-yt up --build -d
 
