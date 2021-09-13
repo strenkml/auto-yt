@@ -1,25 +1,24 @@
 {
-  "name": "auto-youtube-dl",
+  "name": "autoyt-cli",
   "version": "1.0.0",
   "description": "Manages Youtube-dl downloads so that your content stays uo to date",
-  "main": "index.js",
+  "main": "cli.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/strenkml/auto-youtube-dl.git"
+    "url": "git+https://github.com/strenkml/autoYT.git"
   },
   "author": "Matt Strenk",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/strenkml/auto-youtube-dl/issues"
+    "url": "https://github.com/strenkml/autoYT/issues"
   },
-  "homepage": "https://github.com/strenkml/auto-youtube-dl#readme",
+  "homepage": "https://github.com/strenkml/autoYT#readme",
   "dependencies": {
     "commander": "^8.1.0",
-    "deep-diff": "^1.0.2",
-    "enmap": "^5.8.7",
+    "mongodb": "^4.1.1",
     "node-cron": "^3.0.0",
     "readline-sync": "^1.4.10"
   }

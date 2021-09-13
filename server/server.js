@@ -3,7 +3,7 @@ const cron = require("node-cron");
 const { execSync, spawn, exec } = require("child_process");
 const diff = require("deep-diff").diff;
 
-const config = require("./config.json");
+const config = require("../config.json");
 
 execSync(`mkdir -p ${config.userConfigDir}/data`);
 

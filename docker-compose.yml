@@ -1,7 +1,25 @@
 version: "3.9" # optional since v1.27.0
 services:
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: autoytMongo
   server:
-    build: .
+    build: server/.
     volumes:
       - /home/strenkml/AutoYT/downloads:/downloads
       - /home/strenkml/AutoYT/config:/config
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: autoytMongo
+      ME_CONFIG_MONGODB_URL: mongodb://root:autoytMongo@mongo:27017/
+  cli:
+    build: cli/.
+    volumes:
+      - /home/strenkml/AutoYT/config:/config
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: autoytMongo
+      ME_CONFIG_MONGODB_URL: mongodb://root:autoytMongo@mongo:27017/

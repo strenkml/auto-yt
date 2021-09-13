@@ -1,54 +1,56 @@
-const Enmap = require("enmap");
 const { program } = require("commander");
 const prompt = require("readline-sync");
 const fs = require("fs");
 const cron = require("node-cron");
+
+const db = require("./helpers/db.js");
 
 const sourceTemplate = require("./defaults/source.json");
 const config = require("./config.json");
 
 const types = ["Channel", "Playlist", "Video"];
 
-const settings = new Enmap({
-  name: "settings",
-  autoEnsure: {
-    cookiesFile: "cookies.txt",
-  },
-  dataDir: `${config.userConfigDir}/data`,
-});
+var sources = null;
 
-const sources = new Enmap({
-  name: "sources",
-  dataDir: `${config.userConfigDir}/data`,
-});
+main();
 
-program.version("0.0.1");
+async function main() {
+  await db.init();
+  commandLineOptions();
+}
 
-program.command("add").description("Add a New Video Source").action(addSource);
+function commandLineOptions() {
+  program.version("0.0.1");
 
-program
-  .command("list")
-  .description("List the Video Source")
-  .action(listSources);
+  program
+    .command("add")
+    .description("Add a New Video Source")
+    .action(addSource);
 
-program.command("edit").description("Edit a Video Source").action(editSource);
+  program
+    .command("list")
+    .description("List the Video Source")
+    .action(listSources);
 
-program
-  .command("info")
-  .description("Get info for a Video Source")
-  .action(sourceInfo);
+  program.command("edit").description("Edit a Video Source").action(editSource);
 
-program
-  .command("delete")
-  .description("Delete Video Source")
-  .action(deleteSource);
+  program
+    .command("info")
+    .description("Get info for a Video Source")
+    .action(sourceInfo);
 
-program.option(
-  "--set-cookies <path>",
-  "Set the location of the YT cookies file. The default is /config/cookies.txt\nFor instructions for making the file: https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"
-);
+  program
+    .command("delete")
+    .description("Delete Video Source")
+    .action(deleteSource);
 
-program.parse();
+  program.option(
+    "--set-cookies <path>",
+    "Set the location of the YT cookies file. The default is /config/cookies.txt\nFor instructions for making the file: https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"
+  );
+
+  program.parse();
+}
 
 function convertToCron(data) {
   var month = data.dayOfMonth || "*";
@@ -59,7 +61,8 @@ function convertToCron(data) {
   return `${minute} ${hour} ${month} * ${week}`;
 }
 
-function addSource() {
+async function addSource() {
+  sources = await db.getSourcesArray();
   var name = prompt.question(
     "What is the name of the video source (This will be used as the folder name)? ",
     { limit: checkNewName }
@@ -78,7 +81,7 @@ function addSource() {
     "What metadata type should be used? "
   );
 
-  if (metadataIndex == -1) return;
+  if (metadataIndex == -1) db.close();
 
   var customMetadata = null;
   if (metadataIndex == 2) {
@@ -96,7 +99,7 @@ function addSource() {
       "How often should the videos be downloaded? "
     );
 
-    if (frequencyIndex == -1) return;
+    if (frequencyIndex == -1) db.close();
 
     if (frequencyIndex == 1) {
       var timingMethodChoice = [
@@ -108,7 +111,7 @@ function addSource() {
         "How would you like the configure the scheduler? "
       );
 
-      if (timingMethodIndex == -1) return;
+      if (timingMethodIndex == -1) db.close();
 
       if (timingMethodIndex == 0) {
         var occurrenceChoices = ["Monthly", "Weekly", "Daily", "Hourly"];
@@ -117,7 +120,7 @@ function addSource() {
           "How often would you like to check for new videos? "
         );
 
-        if (occurrenceIndex == -1) return;
+        if (occurrenceIndex == -1) db.close();
 
         switch (occurrenceIndex) {
           case 0:
@@ -173,32 +176,29 @@ function addSource() {
     cronFormat = "no";
   }
 
-  var currentKey = sources.autonum;
-  sources.set(currentKey, sourceTemplate);
-  sources.set(currentKey, name, "name");
-  sources.set(currentKey, url, "url");
-  sources.set(currentKey, type, "type");
-  sources.set(currentKey, metadata, "metadata");
-  sources.set(currentKey, cronFormat, "cron");
-  if (customMetadata != null) {
-    sources.set(currentKey, customMetadata, "customMetadata");
-  }
-
-  console.log(sources.get(currentKey));
+  var sourceObj = sourceTemplate;
+  sourceObj.name = name;
+  sourceObj.url = url;
+  sourceObj.type = type;
+  sourceObj.metadata = metadata;
+  sourceObj.customMetadata = customMetadata;
+  sourceObj.cron = cronFormat;
+  await db.addSource(sourceObj);
+  db.close();
 }
 
-function listSources() {
-  var values = sources.array();
+async function listSources() {
+  var values = await db.getSourcesArray();
 
   values.forEach((item) => {
     console.log(`- ${item.name}`);
   });
+  db.close();
 }
 
 // TODO: Add the ability to edit by name
-function editSource() {
-  var keys = sources.keyArray();
-  var values = sources.array();
+async function editSource() {
+  var values = await db.getSourcesArray();
 
   var names = [];
   values.forEach((item) => {
@@ -210,9 +210,9 @@ function editSource() {
     "Select a source to edit: "
   );
 
-  if (selectedSourceIndex == -1) return;
+  if (selectedSourceIndex == -1) db.close();
 
-  var source = sources.get(keys[selectedSourceIndex]);
+  // var source = sources.get(keys[selectedSourceIndex]);
 
   var editChoices = ["Name", "URL", "Metadata Type", "Schedule"];
   var editIndex = prompt.keyInSelect(
@@ -220,14 +220,13 @@ function editSource() {
     "Select a video source setting to change: "
   );
 
-  if (editIndex == -1) return;
+  if (editIndex == -1) db.close();
 }
 
 // TODO: Add the ability to delete by name
 // TODO: Add a confirmation for deleting a source
 function deleteSource() {
-  var keys = sources.keyArray();
-  var values = sources.array();
+  var values = db.getSourcesArray();
 
   var names = [];
   values.forEach((item) => {
@@ -238,7 +237,9 @@ function deleteSource() {
     names,
     "Select a source to delete: "
   );
-  sources.delete(keys[selectedSourceIndex]);
+
+  db.deleteSource(names[selectedSourceIndex]);
+  db.close();
 }
 
 function sourceInfo() {}
@@ -258,7 +259,7 @@ function checkNewName(name) {
   }
 
   // Check if there is a source that has the same name
-  if (sources.find((val) => val.name === name)) {
+  if (sources.find((e) => e.name === name)) {
     console.log("A video source with the same name already exists");
     return false;
   }
@@ -275,7 +276,7 @@ function checkNewUrl(url) {
   }
 
   // Check if there is a source that has the same url
-  if (sources.find((val) => val.url === url)) {
+  if (sources.find((e) => e.url === url)) {
     console.log("A video source with the same url already exists");
     return false;
   }
