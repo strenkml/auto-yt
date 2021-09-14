@@ -1,111 +1,165 @@
 const cron = require("node-cron");
-const { execSync, spawn, exec } = require("child_process");
-const diff = require("deep-diff").diff;
+const { spawn } = require("child_process");
 
 const db = require("./helpers/db.js");
 
 const config = require("./config.json");
 
-execSync(`mkdir -p ${config.userConfigDir}/data`);
-
 // Declare variables
-var crons = [];
-var oldArray = null;
+var downloads = [];
+var sourcesWatch = null;
+var settingsWatch = null;
 
 init();
-
-setInterval(async () => {
-  checkSourcesDifferences();
-}, 2000);
 
 async function init() {
   await db.init();
 
-  oldArray = await db.getSourcesArray();
+  sourcesWatch = db.getSourcesWatchStream();
+  settingsWatch = db.getSettingsWatchStream();
 
-  oldArray.forEach((source) => {
-    // if (source.cron != "no") {
-    //   createCron(source);
-    // }
-    createCron(source);
+  sourcesWatch.on("change", onSourcesChange);
+
+  settingsWatch.on("change", onSettingsChange);
+
+  var sources = await db.getSourcesArray();
+
+  sources.forEach((source) => {
+    if (source.cron != "no") {
+      createCron(source);
+    } else {
+      oneTimeDownload(source);
+    }
+  });
+}
+
+function oneTimeDownload(source) {
+  var data = createYTDLCommand(source.url, source.name, source.metadata);
+  var child = spawn(data.command, data.args);
+
+  child.stdout.on("data", (data) => {
+    console.log(`stdout:\n${data}`);
+  });
+
+  child.stderr.on("data", (data) => {
+    console.error(`stderr: ${data}`);
+  });
+
+  child.on("error", (error) => {
+    console.error(`error: ${error.message}`);
+  });
+
+  child.on("close", (code) => {
+    console.log(`child process exited with code ${code}`);
+  });
+
+  downloads.push({
+    key: source._id,
+    task: null,
+    running: true,
+    child: child,
   });
 }
 
 function createCron(source) {
+  var child = null;
   let task = cron.schedule(
     "* * * * *",
     () => {
-      exec(
-        createYTDLCommand(source.url, source.name, source.metadata),
-        (error, stdout, stderr) => {
-          if (error) {
-            console.log(`error: ${error.message}`);
-          }
-          if (stderr) {
-            console.log(`stderr: ${stderr}`);
-          }
-          console.log(`stdout: ${stdout}`);
-        }
-      );
+      var data = createYTDLCommand(source.url, source.name, source.metadata);
+      child = spawn(data.command, data.args);
+
+      child.stdout.on("data", (data) => {
+        console.log(`stdout:\n${data}`);
+      });
+
+      child.stderr.on("data", (data) => {
+        console.error(`stderr: ${data}`);
+      });
+
+      child.on("error", (error) => {
+        console.error(`error: ${error.message}`);
+      });
+
+      child.on("close", (code) => {
+        console.log(`child process exited with code ${code}`);
+      });
     },
-    { scheduled: true, timezone: "America/New_York" }
+    {
+      scheduled: true,
+      timezone: "America/New_York",
+    }
   );
 
-  crons.push({
+  downloads.push({
     key: source._id,
     task: task,
     running: true,
+    child: child,
   });
 }
 
 function removeCron(key) {
-  var _cron = crons.find((item) => item.key === key);
-  _cron.task.destroy();
+  var _cron = downloads.find((item) => item.key === key);
+  _cron.child.kill("SIGINT");
+  if (_cron.task != null) _cron.task.destroy();
 
-  // Remove the destroyed task from the crons array
-  crons = crons.find((item) => item.key != key);
+  // Remove the destroyed task from the downloads array
+  downloads = downloads.find((item) => item.key != key);
 }
 
 function editCron(key, newSource) {
   removeCron(key);
-  createCron(newSource, key);
+  createCron(newSource);
 }
 
-function pauseCron(key) {
-  var _cron = crons.find((item) => item.key === key);
-  _cron.task.stop();
-  crons.map((item) => (item.running = false));
-}
+// function pauseCron(key) {
+//   var _cron = downloads.find((item) => item.key === key);
+//   _cron.task.stop();
+//   downloads.map((item) => (item.running = false));
+// }
 
-function resumeCron(key) {
-  var _cron = crons.find((item) => item.key === key);
-  _cron.task.start();
-  crons.map((item) => (item.running = true));
-}
+// function resumeCron(key) {
+//   var _cron = downloads.find((item) => item.key === key);
+//   _cron.task.start();
+//   downloads.map((item) => (item.running = true));
+// }
 
 function createYTDLCommand(url, name, metadata) {
-  return `youtube-dl "${url}" --download-archive "${config.downloadDir}/${name}/downloaded.txt" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --output "${config.downloadDir}/${name}/${name}.%(ext)s" --retries infinite --fragment-retries infinite --continue --no-overwrites --embed-thumbnail --embed-subs --add-metadata --restrict-filenames`;
+  var obj = {
+    command: "youtube-dl",
+    args: [
+      `${url}`,
+      "-v",
+      "--download-archive",
+      `${config.downloadDir}/${name}/downloaded.txt`,
+      "-f",
+      "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+      "--output",
+      `${config.downloadDir}/${name}/${metadata}`,
+      "--retries",
+      "infinite",
+      "--fragment-retries",
+      "infinite",
+      "--no-continue",
+      "--embed-thumbnail",
+      "--embed-subs",
+      "--add-metadata",
+      "--restrict-filenames",
+    ],
+  };
+  return obj;
 }
 
-async function checkSourcesDifferences() {
-  var newArray = await db.getSourcesArray();
-  var arrayDiff = diff(oldArray, newArray);
-  if (arrayDiff) {
-    arrayDiff.forEach((e) => {
-      console.log(e);
-      if (e.kind == "A") {
-        if (e.item.kind == "N") {
-          // Source was added
-          createCron(e.item.rhs);
-        } else if (e.item.kind == "D") {
-          // Source was deleted
-          removeCron(e.item.rhs.id_);
-        } else if (e.item.kind == "E") {
-          // Source was edited
-          editCron(e.item.rhs.key, e.item.rhs.value);
-        }
-      }
-    });
+function onSourcesChange(change) {
+  console.log(change);
+  if (change.operationType === "insert") {
+    createCron(change.fullDocument);
+  } else if (change.operationType === "replace") {
+    editCron(change.documentKey._id, change.fullDocument);
+  } else if (change.operationType === "delete") {
+    removeCron(change.documentKey._id);
   }
-  oldArray = newArray;
 }
+
+function onSettingsChange(change) {}

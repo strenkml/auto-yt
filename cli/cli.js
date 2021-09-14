@@ -29,10 +29,13 @@ function commandLineOptions() {
 
   program
     .command("list")
-    .description("List the Video Source")
+    .description("List the Video Sources")
     .action(listSources);
 
-  program.command("edit").description("Edit a Video Source").action(editSource);
+  program
+    .command("edit")
+    .description("Edit the timing of an added playlist or channel")
+    .action(editSource);
 
   program
     .command("info")
@@ -41,7 +44,7 @@ function commandLineOptions() {
 
   program
     .command("delete")
-    .description("Delete Video Source")
+    .description("Delete a Video Source")
     .action(deleteSource);
 
   program.option(
@@ -83,95 +86,21 @@ async function addSource() {
 
   if (metadataIndex == -1) db.close();
 
-  var customMetadata = null;
-  if (metadataIndex == 2) {
-    customMetadata = prompt.question(
+  var metadata = null;
+  if (metadataIndex == 0) {
+    metadata = "%(title)s.%(ext)s";
+  } else if (metadataIndex == 1) {
+    metadata =
+      "%(uploader)s [%(channel_id)s]/%(playlist_index)s - %(title)s [%(id)s].%(ext)s";
+  } else if (metadataIndex == 2) {
+    metadata = prompt.question(
       "Enter a custom template (https://github.com/ytdl-org/youtube-dl#output-template): "
     );
   }
-  var metadata = metadataChoices[metadataIndex];
 
   var cronFormat = null;
   if (type != types[2]) {
-    var frequencyChoices = ["One time", "Use scheduler"];
-    var frequencyIndex = prompt.keyInSelect(
-      frequencyChoices,
-      "How often should the videos be downloaded? "
-    );
-
-    if (frequencyIndex == -1) db.close();
-
-    if (frequencyIndex == 1) {
-      var timingMethodChoice = [
-        "Basic Timing Configurator",
-        "Custom (cron format)",
-      ];
-      var timingMethodIndex = prompt.keyInSelect(
-        timingMethodChoice,
-        "How would you like the configure the scheduler? "
-      );
-
-      if (timingMethodIndex == -1) db.close();
-
-      if (timingMethodIndex == 0) {
-        var occurrenceChoices = ["Monthly", "Weekly", "Daily", "Hourly"];
-        var occurrenceIndex = prompt.keyInSelect(
-          occurrenceChoices,
-          "How often would you like to check for new videos? "
-        );
-
-        if (occurrenceIndex == -1) db.close();
-
-        switch (occurrenceIndex) {
-          case 0:
-            var dayOfMonth = prompt.question(
-              "What day of the month should new videos be checked for (1-31)? ",
-              { limit: /^([1-9]|[12][0-9]|3[01])$/ }
-            );
-            var hourOfDay = prompt.question(
-              "What hour of the day should new videos be checked for (0-23)? ",
-              { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
-            );
-            var minuteOfHour = prompt.question(
-              "What minute of the hour should new videos be checked for (0-59)? ",
-              { limit: /^([0-5]{0,1}[0-9])$/ }
-            );
-            break;
-          case 1:
-            var dayOfWeek = prompt.question(
-              "What day of the week should new videos be checked for (1-7)? ",
-              { limit: /^[1-7]$/ }
-            );
-          case 2:
-            var hourOfDay = prompt.question(
-              "What hour of the day should new videos be checked for (0-23)? ",
-              { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
-            );
-          case 3:
-            var minuteOfHour = prompt.question(
-              "What minute of the hour should new videos be checked for (0-59)? ",
-              { limit: /^([0-5]{0,1}[0-9])$/ }
-            );
-        }
-        cronFormat = convertToCron({
-          dayOfMonth: dayOfMonth,
-          dayOfWeek: dayOfWeek,
-          hourOfDay: hourOfDay,
-          minuteOfHour: minuteOfHour,
-        });
-      } else {
-        cronFormat = prompt.question(
-          "In cron format, enter a custom schedule: ",
-          {
-            limit: (input) => {
-              return cron.validate(input);
-            },
-          }
-        );
-      }
-    } else {
-      cronFormat = "no";
-    }
+    cronFormat = getTiming();
   } else {
     cronFormat = "no";
   }
@@ -181,7 +110,6 @@ async function addSource() {
   sourceObj.url = url;
   sourceObj.type = type;
   sourceObj.metadata = metadata;
-  sourceObj.customMetadata = customMetadata;
   sourceObj.cron = cronFormat;
   await db.addSource(sourceObj);
   db.close();
@@ -198,7 +126,7 @@ async function listSources() {
 
 // TODO: Add the ability to edit by name
 async function editSource() {
-  var values = await db.getSourcesArray();
+  var values = await db.getSourcesPlaylistChannelArray();
 
   var names = [];
   values.forEach((item) => {
@@ -212,15 +140,10 @@ async function editSource() {
 
   if (selectedSourceIndex == -1) db.close();
 
-  // var source = sources.get(keys[selectedSourceIndex]);
+  var source = await db.hasSourceWithName(names[selectedSourceIndex]);
 
-  var editChoices = ["Name", "URL", "Metadata Type", "Schedule"];
-  var editIndex = prompt.keyInSelect(
-    editChoices,
-    "Select a video source setting to change: "
-  );
-
-  if (editIndex == -1) db.close();
+  var cron = getTiming();
+  db.updateCronFormat(source._id, cron);
 }
 
 // TODO: Add the ability to delete by name
@@ -301,4 +224,86 @@ function getSourceTypeFromUrl(url) {
     return types[2];
   }
   return null;
+}
+
+function getTiming() {
+  var timing = null;
+
+  var frequencyChoices = ["One time", "Use scheduler"];
+  var frequencyIndex = prompt.keyInSelect(
+    frequencyChoices,
+    "How often should the videos be downloaded? "
+  );
+
+  if (frequencyIndex == -1) db.close();
+
+  if (frequencyIndex == 1) {
+    var timingMethodChoice = [
+      "Basic Timing Configurator",
+      "Custom (cron format)",
+    ];
+    var timingMethodIndex = prompt.keyInSelect(
+      timingMethodChoice,
+      "How would you like the configure the scheduler? "
+    );
+
+    if (timingMethodIndex == -1) db.close();
+
+    if (timingMethodIndex == 0) {
+      var occurrenceChoices = ["Monthly", "Weekly", "Daily", "Hourly"];
+      var occurrenceIndex = prompt.keyInSelect(
+        occurrenceChoices,
+        "How often would you like to check for new videos? "
+      );
+
+      if (occurrenceIndex == -1) db.close();
+
+      switch (occurrenceIndex) {
+        case 0:
+          var dayOfMonth = prompt.question(
+            "What day of the month should new videos be checked for (1-31)? ",
+            { limit: /^([1-9]|[12][0-9]|3[01])$/ }
+          );
+          var hourOfDay = prompt.question(
+            "What hour of the day should new videos be checked for (0-23)? ",
+            { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
+          );
+          var minuteOfHour = prompt.question(
+            "What minute of the hour should new videos be checked for (0-59)? ",
+            { limit: /^([0-5]{0,1}[0-9])$/ }
+          );
+          break;
+        case 1:
+          var dayOfWeek = prompt.question(
+            "What day of the week should new videos be checked for (1-7)? ",
+            { limit: /^[1-7]$/ }
+          );
+        case 2:
+          var hourOfDay = prompt.question(
+            "What hour of the day should new videos be checked for (0-23)? ",
+            { limit: /^(1{0,1}[0-9]|2[0-3])$/ }
+          );
+        case 3:
+          var minuteOfHour = prompt.question(
+            "What minute of the hour should new videos be checked for (0-59)? ",
+            { limit: /^([0-5]{0,1}[0-9])$/ }
+          );
+      }
+      timing = convertToCron({
+        dayOfMonth: dayOfMonth,
+        dayOfWeek: dayOfWeek,
+        hourOfDay: hourOfDay,
+        minuteOfHour: minuteOfHour,
+      });
+    } else {
+      timing = prompt.question("In cron format, enter a custom schedule: ", {
+        limit: (input) => {
+          return cron.validate(input);
+        },
+      });
+    }
+  } else {
+    timing = "no";
+  }
+  return timing;
 }

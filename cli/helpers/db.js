@@ -59,3 +59,11 @@ module.exports.hasSourceWithUrl = async (url) => {
 module.exports.getSourcesArray = async () => {
   return await sources.find({}).toArray();
 };
+
+module.exports.getSourcesPlaylistChannelArray = async () => {
+  return await sources.find({ type: /^Channel$|^Playlist$/ }).toArray();
+};
+
+module.exports.updateCronFormat = async (id, format) => {
+  return await sources.updateOne({ id: id }, { $set: { cron: format } });
+};

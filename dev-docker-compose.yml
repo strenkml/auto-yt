@@ -1,15 +1,19 @@
 version: "3.9" # optional since v1.27.0
 services:
   mongo:
-    image: mongo
+    image: bitnami/mongodb:latest
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: pass
+      MONGODB_REPLICA_SET_MODE: primary
+      MONGODB_ROOT_USER: root
+      MONGODB_ROOT_PASSWORD: pass
+      MONGODB_REPLICA_SET_KEY: replicasetkey123
+      MONGODB_ADVERTISED_HOSTNAME: mongo
+      MONGODB_DATABASE: autoYT
     ports:
       - 27017:27017
     volumes:
-      - /home/strenkml/AutoYT/db:/data/db
+      - mongoData:/bitnami/mongodb:rw
   mongo-express:
     image: mongo-express
     restart: always
@@ -21,7 +25,6 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass
       ME_CONFIG_MONGODB_URL: mongodb://root:pass@mongo:27017/
-      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
   server:
     build: server/.
     depends_on:
@@ -43,3 +46,5 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass
       ME_CONFIG_MONGODB_URL: mongodb://root:pass@mongo:27017/
+volumes:
+  mongoData:
