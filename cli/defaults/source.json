@@ -2,6 +2,8 @@
   "name": null,
   "url": null,
   "type": null,
+  "metadataType": null,
   "metadata": null,
-  "cron": null
+  "cron": null,
+  "enabled": true
 }

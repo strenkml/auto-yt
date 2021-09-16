@@ -31,21 +31,27 @@ module.exports.close = async () => {
 };
 
 module.exports.addSource = async (value) => {
-  await sources.insertOne(value);
+  return await sources.insertOne(value);
 };
 
 module.exports.deleteSource = async (name) => {
   const query = { name: name };
-  var result = db.deleteOne(query);
+  return await db.deleteOne(query);
 };
 
 module.exports.hasSourceWithName = async (name) => {
   const query = { name: name };
 
   var result = await sources.findOne(query);
-  console.log(result);
+
   if (result) return true;
   return false;
+};
+
+module.exports.getSourceWithName = async (name) => {
+  const query = { name: name };
+
+  return await sources.findOne(query);
 };
 
 module.exports.hasSourceWithUrl = async (url) => {
@@ -66,4 +72,28 @@ module.exports.getSourcesPlaylistChannelArray = async () => {
 
 module.exports.updateCronFormat = async (id, format) => {
   return await sources.updateOne({ id: id }, { $set: { cron: format } });
+};
+
+module.exports.getVideoSourcesArray = async () => {
+  return await sources.find({ type: "Video" }).toArray();
+};
+
+module.exports.getPlaylistSourcesArray = async () => {
+  return await sources.find({ type: "Playlist" }).toArray();
+};
+
+module.exports.getChannelSourcesArray = async () => {
+  return await sources.find({ type: "Channel" }).toArray();
+};
+
+module.exports.getTitleMetadataArray = async () => {
+  return await sources.find({ metadataType: "Title" }).toArray();
+};
+
+module.exports.getPlexMetadataArray = async () => {
+  return await sources.find({ metadataType: "Plex" }).toArray();
+};
+
+module.exports.getCustomMetadataArray = async () => {
+  return await sources.find({ metadataType: "Custom" }).toArray();
 };

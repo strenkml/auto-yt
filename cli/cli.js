@@ -28,22 +28,22 @@ function commandLineOptions() {
     .action(addSource);
 
   program
-    .command("list")
+    .command("list [filter]")
     .description("List the Video Sources")
     .action(listSources);
 
   program
-    .command("edit")
+    .command("edit [name]")
     .description("Edit the timing of an added playlist or channel")
     .action(editSource);
 
   program
-    .command("info")
+    .command("info [name]")
     .description("Get info for a Video Source")
     .action(sourceInfo);
 
   program
-    .command("delete")
+    .command("delete [name]")
     .description("Delete a Video Source")
     .action(deleteSource);
 
@@ -86,6 +86,7 @@ async function addSource() {
 
   if (metadataIndex == -1) db.close();
 
+  var metadataType = metadataChoices[metadataIndex];
   var metadata = null;
   if (metadataIndex == 0) {
     metadata = "%(title)s.%(ext)s";
@@ -102,70 +103,138 @@ async function addSource() {
   if (type != types[2]) {
     cronFormat = getTiming();
   } else {
-    cronFormat = "no";
+    cronFormat = "N/A";
   }
 
   var sourceObj = sourceTemplate;
   sourceObj.name = name;
   sourceObj.url = url;
   sourceObj.type = type;
+  sourceObj.metadataType = metadataType;
   sourceObj.metadata = metadata;
   sourceObj.cron = cronFormat;
   await db.addSource(sourceObj);
   db.close();
 }
 
-async function listSources() {
-  var values = await db.getSourcesArray();
+async function listSources(filter) {
+  var values = null;
+  if (filter.toLowerCase() == "video") {
+    values = await db.getVideoSourcesArray();
+    console.log("Sources with the media type: video");
+  } else if (filter.toLowerCase() == "playlist") {
+    values = await db.getPlaylistSourcesArray();
+    console.log("Sources with the media type: playlist");
+  } else if (filter.toLowerCase() == "channel") {
+    values = await db.getChannelSourcesArray();
+    console.log("Sources with the media type: channel");
+  } else if (filter.toLowerCase() == "title") {
+    values = await db.getTitleMetadataArray();
+    console.log("Sources with the metadata type: title");
+  } else if (filter.toLowerCase() == "plex") {
+    values = await db.getPlexMetadataArray();
+    console.log("Sources with the media type: plex");
+  } else if (filter.toLowerCase() == "custom") {
+    values = await db.getCustomMetadataArray();
+    console.log("Sources with the media type: custom");
+  } else {
+    values = await db.getSourcesArray();
+    console.log("All media sources:");
+  }
 
   values.forEach((item) => {
     console.log(`- ${item.name}`);
+    console.log(`-- ${item.enabled ? "Enabled" : "Disabled"}`);
   });
   db.close();
 }
 
-// TODO: Add the ability to edit by name
-async function editSource() {
-  var values = await db.getSourcesPlaylistChannelArray();
+async function editSource(name) {
+  if (name == null) {
+    var values = await db.getSourcesPlaylistChannelArray();
 
-  var names = [];
-  values.forEach((item) => {
-    names.push(item.name);
-  });
+    var names = [];
+    values.forEach((item) => {
+      names.push(item.name);
+    });
 
-  var selectedSourceIndex = prompt.keyInSelect(
-    names,
-    "Select a source to edit: "
-  );
+    var selectedSourceIndex = prompt.keyInSelect(
+      names,
+      "Select a source to edit: "
+    );
 
-  if (selectedSourceIndex == -1) db.close();
-
-  var source = await db.hasSourceWithName(names[selectedSourceIndex]);
+    if (selectedSourceIndex == -1) db.close();
+    var source = await db.getSourceWithName(names[selectedSourceIndex]);
+  } else {
+    var source = await db.getSourceWithName(name);
+  }
 
   var cron = getTiming();
   db.updateCronFormat(source._id, cron);
-}
-
-// TODO: Add the ability to delete by name
-// TODO: Add a confirmation for deleting a source
-function deleteSource() {
-  var values = db.getSourcesArray();
-
-  var names = [];
-  values.forEach((item) => {
-    names.push(item.name);
-  });
-
-  var selectedSourceIndex = prompt.keyInSelect(
-    names,
-    "Select a source to delete: "
-  );
-
-  db.deleteSource(names[selectedSourceIndex]);
   db.close();
 }
 
-function sourceInfo() {}
+function deleteSource(name) {
+  if (name == null) {
+    var values = db.getSourcesArray();
+
+    var names = [];
+    values.forEach((item) => {
+      names.push(item.name);
+    });
+
+    var selectedSourceIndex = prompt.keyInSelect(
+      names,
+      "Select a source to delete: "
+    );
+
+    if (selectedSourceIndex == -1) db.close();
+
+    if (confirmAction(`delete media source ${names[selectedSourceIndex]}`)) {
+      db.deleteSource(names[selectedSourceIndex]);
+    } else {
+      console.log("Video source was not deleted!");
+    }
+  } else {
+    if (confirmAction(`delete media source ${name}`)) {
+      db.deleteSource(name);
+    } else {
+      console.log("Video source was not deleted!");
+    }
+  }
+
+  db.close();
+}
+
+async function sourceInfo(name) {
+  var source = null;
+  if (name == null) {
+    var values = db.getSourcesArray();
+
+    var names = [];
+    values.forEach((item) => {
+      names.push(item.name);
+    });
+
+    var selectedSourceIndex = prompt.keyInSelect(
+      names,
+      "Select a source to view more info: "
+    );
+
+    if (selectedSourceIndex == -1) db.close();
+
+    source = await db.getSourceWithName(names[selectedSourceIndex]);
+  } else {
+    source = await db.getSourceWithName(name);
+  }
+  console.log(`Name: ${source.name}`);
+  console.log(`Url: ${source.url}`);
+  console.log(`Type: ${source.type}`);
+  console.log(`Metadata Type: ${source.metadataType}`);
+  console.log(`Metadata Format: ${source.metadata}`);
+  console.log(`Cron Timing: ${source.cron}`);
+  console.log(`Enabled?: ${source.enabled}`);
+}
 
 function checkNewName(name) {
   // Check if there is already a folder in the download directory with the same name
@@ -303,7 +372,11 @@ function getTiming() {
       });
     }
   } else {
-    timing = "no";
+    timing = "N/A";
   }
   return timing;
+}
+
+function confirmAction(action) {
+  return prompt.keyInYNStrict(`Are you sure that you want to ${action}?`);
 }

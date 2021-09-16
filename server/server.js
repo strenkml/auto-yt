@@ -25,7 +25,7 @@ async function init() {
   var sources = await db.getSourcesArray();
 
   sources.forEach((source) => {
-    if (source.cron != "no") {
+    if (source.cron != "N/A") {
       createCron(source);
     } else {
       oneTimeDownload(source);
