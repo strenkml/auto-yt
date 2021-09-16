@@ -24,12 +24,12 @@ function commandLineOptions() {
 
   program
     .command("add")
-    .description("Add a New Video Source")
+    .description("Add a New Media Source")
     .action(addSource);
 
   program
     .command("list [filter]")
-    .description("List the Video Sources")
+    .description("List the Media Sources")
     .action(listSources);
 
   program
@@ -39,12 +39,22 @@ function commandLineOptions() {
 
   program
     .command("info [name]")
-    .description("Get info for a Video Source")
+    .description("Get info for a Media Source")
     .action(sourceInfo);
 
   program
     .command("delete [name]")
-    .description("Delete a Video Source")
+    .description("Delete a Media Source")
+    .action(deleteSource);
+
+  program
+    .command("delete [name]")
+    .description("Delete a Media Source")
+    .action(deleteSource);
+
+  program
+    .command("delete [name]")
+    .description("Delete a Media Source")
     .action(deleteSource);
 
   program.option(
@@ -67,7 +77,7 @@ function convertToCron(data) {
 async function addSource() {
   sources = await db.getSourcesArray();
   var name = prompt.question(
-    "What is the name of the video source (This will be used as the folder name)? ",
+    "What is the name of the media source (This will be used as the folder name)? ",
     { limit: checkNewName }
   );
 
@@ -193,13 +203,13 @@ function deleteSource(name) {
     if (confirmAction(`delete media source ${names[selectedSourceIndex]}`)) {
       db.deleteSource(names[selectedSourceIndex]);
     } else {
-      console.log("Video source was not deleted!");
+      console.log("Media source was not deleted!");
     }
   } else {
     if (confirmAction(`delete media source ${name}`)) {
       db.deleteSource(name);
     } else {
-      console.log("Video source was not deleted!");
+      console.log("Media source was not deleted!");
     }
   }
 
@@ -252,7 +262,7 @@ function checkNewName(name) {
 
   // Check if there is a source that has the same name
   if (sources.find((e) => e.name === name)) {
-    console.log("A video source with the same name already exists");
+    console.log("A media source with the same name already exists");
     return false;
   }
   return true;
@@ -269,7 +279,7 @@ function checkNewUrl(url) {
 
   // Check if there is a source that has the same url
   if (sources.find((e) => e.url === url)) {
-    console.log("A video source with the same url already exists");
+    console.log("A media source with the same url already exists");
     return false;
   }
   return true;
