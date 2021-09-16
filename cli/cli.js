@@ -5,6 +5,9 @@ const cron = require("node-cron");
 
 const db = require("./helpers/db.js");
 
+// Version of the CLI
+const cliVersion = "0.0.1";
+
 const sourceTemplate = require("./defaults/source.json");
 const config = require("./config.json");
 
@@ -20,7 +23,7 @@ async function main() {
 }
 
 function commandLineOptions() {
-  program.version("0.0.1");
+  program.version(cliVersion);
 
   program
     .command("add")
