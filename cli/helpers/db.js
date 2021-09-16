@@ -97,3 +97,7 @@ module.exports.getPlexMetadataArray = async () => {
 module.exports.getCustomMetadataArray = async () => {
   return await sources.find({ metadataType: "Custom" }).toArray();
 };
+
+module.exports.setEnabled = async (id, enabled) => {
+  return await sources.updateOne({ id: id }, { $set: { enabled: enabled } });
+};

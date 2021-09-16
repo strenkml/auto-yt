@@ -48,14 +48,14 @@ function commandLineOptions() {
     .action(deleteSource);
 
   program
-    .command("delete [name]")
-    .description("Delete a Media Source")
-    .action(deleteSource);
+    .command("enable [name]")
+    .description("Enable a Media Source")
+    .action(enableSource);
 
   program
-    .command("delete [name]")
-    .description("Delete a Media Source")
-    .action(deleteSource);
+    .command("disable [name]")
+    .description("Disable a Media Source")
+    .action(disableSource);
 
   program.option(
     "--set-cookies <path>",
@@ -244,6 +244,54 @@ async function sourceInfo(name) {
   console.log(`Metadata Format: ${source.metadata}`);
   console.log(`Cron Timing: ${source.cron}`);
   console.log(`Enabled?: ${source.enabled}`);
+}
+
+async function enableSource(name) {
+  if (name == null) {
+    var values = await db.getSourcesArray();
+
+    var names = [];
+    values.forEach((item) => {
+      names.push(item.name);
+    });
+
+    var selectedSourceIndex = prompt.keyInSelect(
+      names,
+      "Select a source to enable: "
+    );
+
+    if (selectedSourceIndex == -1) db.close();
+    var source = await db.getSourceWithName(names[selectedSourceIndex]);
+  } else {
+    var source = await db.getSourceWithName(name);
+  }
+
+  db.setEnabled(source._id, true);
+  db.close();
+}
+
+async function disableSource(name) {
+  if (name == null) {
+    var values = await db.getSourcesArray();
+
+    var names = [];
+    values.forEach((item) => {
+      names.push(item.name);
+    });
+
+    var selectedSourceIndex = prompt.keyInSelect(
+      names,
+      "Select a source to disable: "
+    );
+
+    if (selectedSourceIndex == -1) db.close();
+    var source = await db.getSourceWithName(names[selectedSourceIndex]);
+  } else {
+    var source = await db.getSourceWithName(name);
+  }
+
+  db.setEnabled(source._id, false);
+  db.close();
 }
 
 function checkNewName(name) {
