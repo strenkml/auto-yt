@@ -71,7 +71,7 @@ module.exports.getSourcesPlaylistChannelArray = async () => {
 };
 
 module.exports.updateCronFormat = async (id, format) => {
-  return await sources.updateOne({ id: id }, { $set: { cron: format } });
+  return await sources.updateOne({ _id: id }, { $set: { cron: format } });
 };
 
 module.exports.getVideoSourcesArray = async () => {
@@ -99,5 +99,19 @@ module.exports.getCustomMetadataArray = async () => {
 };
 
 module.exports.setEnabled = async (id, enabled) => {
-  return await sources.updateOne({ id: id }, { $set: { enabled: enabled } });
+  return await sources.updateOne({ _id: id }, { $set: { enabled: enabled } });
+};
+
+module.exports.updateCookieSettings = async (path) => {
+  return await settings.updateOne(
+    { _id: "cookiesFile" },
+    { $set: { value: path } }
+  );
+};
+
+module.exports.updateTimezoneSettings = async (timezone) => {
+  return await settings.updateOne(
+    { _id: "timezone" },
+    { $set: { value: timezone } }
+  );
 };

@@ -65,7 +65,20 @@ function commandLineOptions() {
     "Set the location of the YT cookies file. The default is /config/cookies.txt\nFor instructions for making the file: https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"
   );
 
+  program.option(
+    "--set-timezone <timezone>",
+    "Set the timezone that will be used for scheduling the downloading of the videos.\nAvailable timezones: https://momentjs.com/timezone/"
+  );
+
   program.parse();
+
+  if (program.opts().setCookies) {
+    db.updateCookieSettings(program.opts().setCookies);
+  }
+
+  if (program.opts().setTimezone) {
+    db.updateTimezoneSettings(program.opts().setTimezone);
+  }
 }
 
 function convertToCron(data) {

@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const { spawn } = require("child_process");
+const fs = require("fs");
 
 const db = require("./helpers/db.js");
 
@@ -14,19 +15,19 @@ init();
 
 async function init() {
   await db.init();
+  await db.setSettingsDefaults();
 
   sourcesWatch = db.getSourcesWatchStream();
   settingsWatch = db.getSettingsWatchStream();
 
   sourcesWatch.on("change", onSourcesChange);
-
   settingsWatch.on("change", onSettingsChange);
 
   var sources = await db.getSourcesArray();
 
   sources.forEach((source) => {
     if (source.cron != "N/A") {
-      createCron(source);
+      createCron(source, true);
     } else {
       oneTimeDownload(source);
     }
@@ -61,13 +62,39 @@ function oneTimeDownload(source) {
   });
 }
 
-function createCron(source) {
+function createCron(source, onStart) {
+  // Instantly start downloading the media source if the server is not starting up
+  if (!onStart) {
+    var instantCmd = createYTDLCommand(
+      source.url,
+      source.name,
+      source.metadata
+    );
+    var instantChild = spawn(instantCmd.command, instantCmd.args);
+
+    instantChild.stdout.on("data", (data) => {
+      console.log(`stdout:\n${data}`);
+    });
+
+    instantChild.stderr.on("data", (data) => {
+      console.error(`stderr: ${data}`);
+    });
+
+    instantChild.on("error", (error) => {
+      console.error(`error: ${error.message}`);
+    });
+
+    instantChild.on("close", (code) => {
+      console.log(`child process exited with code ${code}`);
+    });
+  }
+
   var child = null;
   let task = cron.schedule(
-    "* * * * *",
-    () => {
-      var data = createYTDLCommand(source.url, source.name, source.metadata);
-      child = spawn(data.command, data.args);
+    source.cron,
+    async () => {
+      var cmd = createYTDLCommand(source.url, source.name, source.metadata);
+      child = spawn(cmd.command, cmd.args);
 
       child.stdout.on("data", (data) => {
         console.log(`stdout:\n${data}`);
@@ -86,15 +113,15 @@ function createCron(source) {
       });
     },
     {
-      scheduled: true,
-      timezone: "America/New_York",
+      scheduled: source.enabled,
+      timezone: await db.getSettingById("timezone"),
     }
   );
 
   downloads.push({
     key: source._id,
     task: task,
-    running: true,
+    running: enabled,
     child: child,
   });
 }
@@ -110,20 +137,8 @@ function removeCron(key) {
 
 function editCron(key, newSource) {
   removeCron(key);
-  createCron(newSource);
+  createCron(newSource, false);
 }
-
-// function pauseCron(key) {
-//   var _cron = downloads.find((item) => item.key === key);
-//   _cron.task.stop();
-//   downloads.map((item) => (item.running = false));
-// }
-
-// function resumeCron(key) {
-//   var _cron = downloads.find((item) => item.key === key);
-//   _cron.task.start();
-//   downloads.map((item) => (item.running = true));
-// }
 
 function createYTDLCommand(url, name, metadata) {
   var obj = {
@@ -148,13 +163,22 @@ function createYTDLCommand(url, name, metadata) {
       "--restrict-filenames",
     ],
   };
+  try {
+    // Check if the cookies file exists
+    if (fs.existsSync(db.getSettingById("cookiesFile"))) {
+      args.push("--cookies");
+      args.push(db.getSettingById("cookiesFile"));
+    }
+  } catch (e) {
+    console.error("Cookies file not found!");
+  }
   return obj;
 }
 
 function onSourcesChange(change) {
   console.log(change);
   if (change.operationType === "insert") {
-    createCron(change.fullDocument);
+    createCron(change.fullDocument, false);
   } else if (change.operationType === "replace") {
     editCron(change.documentKey._id, change.fullDocument);
   } else if (change.operationType === "delete") {
@@ -162,4 +186,24 @@ function onSourcesChange(change) {
   }
 }
 
-function onSettingsChange(change) {}
+function onSettingsChange(change) {
+  if (change.documentKey._id == "timezone") {
+    changeGlobalTimezone();
+  }
+}
+
+function changeGlobalTimezone() {
+  var _downloads = downloads;
+  _downloads.forEach((download) => {
+    // Kill spawned command
+    download.child.kill("SIGINT");
+    // Remove cron
+    if (download.task != null) download.task.destroy();
+
+    // Remove cron from array
+    downloads = downloads.find((item) => item.key != download.key);
+
+    // Add a new cron with the new timezone
+    createCron(db.getSourceById(download.key), true);
+  });
+}

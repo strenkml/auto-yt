@@ -1,8 +1,0 @@
-{
-  "defaults": [
-    {
-      "name": "cookiesFile",
-      "value": "/config/cookies.txt"
-    }
-  ]
-}

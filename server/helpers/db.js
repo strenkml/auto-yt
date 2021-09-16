@@ -1,5 +1,7 @@
 const { MongoClient } = require("mongodb");
 
+const settingsDefaults = require("../defaults/settings.json");
+
 // Get the URL from the env variable
 const mongoUrl = process.env.ME_CONFIG_MONGODB_URL;
 
@@ -28,10 +30,26 @@ module.exports.getSourcesArray = async () => {
   return await sources.find({}).toArray();
 };
 
+module.exports.getSourceById = async (id) => {
+  return await sources.findOne({ _id: id });
+};
+
 module.exports.getSourcesWatchStream = () => {
   return sources.watch();
 };
 
 module.exports.getSettingsWatchStream = () => {
   return settings.watch();
+};
+
+module.exports.setSettingsDefaults = async () => {
+  settingsDefaults.defaults.forEach((setting) => {
+    if (!this.getSettingById(setting._id)) {
+      await settings.insertOne(setting);
+    }
+  });
+};
+
+module.exports.getSettingById = async (id) => {
+  return await settings.findOne({ _id: id });
 };

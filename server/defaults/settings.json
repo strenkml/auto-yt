@@ -1,0 +1,12 @@
+{
+  "defaults": [
+    {
+      "_id": "cookiesFile",
+      "value": "/config/cookies.txt"
+    },
+    {
+      "_id": "timezone",
+      "value": "America/New_York"
+    }
+  ]
+}
