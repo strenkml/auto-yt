@@ -62,7 +62,7 @@ function oneTimeDownload(source) {
   });
 }
 
-function createCron(source, onStart) {
+async function createCron(source, onStart) {
   // Instantly start downloading the media source if the server is not starting up
   if (!onStart) {
     var instantCmd = createYTDLCommand(
@@ -89,10 +89,12 @@ function createCron(source, onStart) {
     });
   }
 
+  var timezone = await db.getSettingById("timezone");
+  console.log(timezone);
   var child = null;
   let task = cron.schedule(
     source.cron,
-    async () => {
+    () => {
       var cmd = createYTDLCommand(source.url, source.name, source.metadata);
       child = spawn(cmd.command, cmd.args);
 
@@ -114,7 +116,7 @@ function createCron(source, onStart) {
     },
     {
       scheduled: source.enabled,
-      timezone: await db.getSettingById("timezone"),
+      timezone: timezone.value,
     }
   );
 

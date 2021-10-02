@@ -43,8 +43,10 @@ module.exports.getSettingsWatchStream = () => {
 };
 
 module.exports.setSettingsDefaults = async () => {
-  settingsDefaults.defaults.forEach((setting) => {
-    if (!this.getSettingById(setting._id)) {
+  settingsDefaults.defaults.forEach(async (setting) => {
+    console.log(await this.getSettingById(setting._id));
+    if (!(await this.getSettingById(setting._id))) {
+      console.log(`Inserting for setting: ${setting._id}`);
       await settings.insertOne(setting);
     }
   });
