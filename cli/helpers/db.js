@@ -21,12 +21,12 @@ module.exports.init = async () => {
   db = client.db(dbName);
   settings = db.collection(settingsCollection);
   sources = db.collection(sourcesCollection);
-  console.log("Successsfully connected to the DB");
+  // console.log("Successsfully connected to the DB");
 };
 
 module.exports.close = async () => {
   await client.close();
-  console.log("Closed Connection!");
+  // console.log("Closed Connection!");
   process.exit(0);
 };
 
@@ -35,7 +35,6 @@ module.exports.addSource = async (value) => {
 };
 
 module.exports.deleteSource = async (name) => {
-  console.log(`Deleting: ${name}`);
   const query = { name: name };
   return await sources.deleteOne(query);
 };

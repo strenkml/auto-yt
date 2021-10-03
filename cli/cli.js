@@ -6,7 +6,7 @@ const cron = require("node-cron");
 const db = require("./helpers/db.js");
 
 // Version of the CLI
-const cliVersion = "0.0.1";
+const cliVersion = "1.0.0";
 
 const sourceTemplate = require("./defaults/source.json");
 const config = require("./config.json");
@@ -14,9 +14,6 @@ const config = require("./config.json");
 const types = ["Channel", "Playlist", "Video"];
 
 var sources = null;
-
-// TODO: Add messages for when a source has been successfully added
-// TODO: Remove the DB connection and closing messages
 
 main();
 
@@ -143,6 +140,7 @@ async function addSource() {
   sourceObj.metadata = metadata;
   sourceObj.cron = cronFormat;
   await db.addSource(sourceObj);
+  console.log(`${name} added!`);
   db.close();
 }
 
@@ -225,6 +223,7 @@ async function editSource(name) {
 
   var cron = getTiming();
   await db.updateCronFormat(source._id, cron);
+  console.log(`${name} has been update!`);
   db.close();
 }
 
@@ -246,12 +245,14 @@ async function deleteSource(name) {
 
     if (confirmAction(`delete media source ${names[selectedSourceIndex]}`)) {
       await db.deleteSource(names[selectedSourceIndex]);
+      console.log("Media source was deleted!");
     } else {
       console.log("Media source was not deleted!");
     }
   } else {
     if (confirmAction(`delete media source ${name}`)) {
       await db.deleteSource(name);
+      console.log("Media source was deleted!");
     } else {
       console.log("Media source was not deleted!");
     }
