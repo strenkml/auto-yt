@@ -3,7 +3,7 @@
 [Dockerhub](https://hub.docker.com/repository/docker/strenkml/auto-yt)
 ## About
 Uses the youtube-dl fork [yt-dlp](https://github.com/yt-dlp/yt-dlp) to automatically download videos, playlists, and channels.
-## Usage
+## Installation
 ### docker-compose ([click here for more info](https://docs.linuxserver.io/general/docker-compose))
 #### Option 1: Using the Github Repo
 1. Clone the Github repo using `git clone https://github.com/strenkml/auto-yt.git`
@@ -52,3 +52,5 @@ services:
 volumes:
   mongoData:
 ```
+## Usage
+Run `docker exec -it {CLI_CONTAINER_NAME} /bin/bash -c "autoyt"` to print the help page.
