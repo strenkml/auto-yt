@@ -19,8 +19,8 @@ var sources = null;
 module.exports.init = async () => {
   await client.connect();
   db = client.db(dbName);
-  settings = db.collection("settings");
-  sources = db.collection("sources");
+  settings = db.collection(settingsCollection);
+  sources = db.collection(sourcesCollection);
   console.log("Successsfully connected to the DB");
 };
 
@@ -35,8 +35,9 @@ module.exports.addSource = async (value) => {
 };
 
 module.exports.deleteSource = async (name) => {
+  console.log(`Deleting: ${name}`);
   const query = { name: name };
-  return await db.deleteOne(query);
+  return await sources.deleteOne(query);
 };
 
 module.exports.hasSourceWithName = async (name) => {

@@ -15,6 +15,9 @@ const types = ["Channel", "Playlist", "Video"];
 
 var sources = null;
 
+// TODO: Add messages for when a source has been successfully added
+// TODO: Remove the DB connection and closing messages
+
 main();
 
 async function main() {
@@ -145,34 +148,59 @@ async function addSource() {
 
 async function listSources(filter) {
   var values = null;
-  if (filter.toLowerCase() == "video") {
-    values = await db.getVideoSourcesArray();
-    console.log("Sources with the media type: video");
-  } else if (filter.toLowerCase() == "playlist") {
-    values = await db.getPlaylistSourcesArray();
-    console.log("Sources with the media type: playlist");
-  } else if (filter.toLowerCase() == "channel") {
-    values = await db.getChannelSourcesArray();
-    console.log("Sources with the media type: channel");
-  } else if (filter.toLowerCase() == "title") {
-    values = await db.getTitleMetadataArray();
-    console.log("Sources with the metadata type: title");
-  } else if (filter.toLowerCase() == "plex") {
-    values = await db.getPlexMetadataArray();
-    console.log("Sources with the media type: plex");
-  } else if (filter.toLowerCase() == "custom") {
-    values = await db.getCustomMetadataArray();
-    console.log("Sources with the media type: custom");
+  if (filter != null) {
+    if (filter.toLowerCase() == "video") {
+      values = await db.getVideoSourcesArray();
+      checkListLength(values, "video");
+    } else if (filter.toLowerCase() == "playlist") {
+      values = await db.getPlaylistSourcesArray();
+      checkListLength(values, "playlist");
+    } else if (filter.toLowerCase() == "channel") {
+      values = await db.getChannelSourcesArray();
+      checkListLength(values, "channel");
+    } else if (filter.toLowerCase() == "title") {
+      values = await db.getTitleMetadataArray();
+      checkListLength(values, "title");
+    } else if (filter.toLowerCase() == "plex") {
+      values = await db.getPlexMetadataArray();
+      checkListLength(values, "plex");
+    } else if (filter.toLowerCase() == "custom") {
+      values = await db.getCustomMetadataArray();
+      checkListLength(values, "custom");
+    } else {
+      values = await db.getSourcesArray();
+      checkListLength(values, null);
+    }
   } else {
     values = await db.getSourcesArray();
-    console.log("All media sources:");
+    checkListLength(values, null);
   }
 
   values.forEach((item) => {
     console.log(`- ${item.name}`);
-    console.log(`-- ${item.enabled ? "Enabled" : "Disabled"}`);
+    if (item.cron != "N/A") {
+      console.log(`-- ${item.enabled ? "Enabled" : "Disabled"}`);
+    } else {
+      console.log(`-- One Time Download`);
+    }
   });
   db.close();
+}
+
+function checkListLength(values, type) {
+  if (values.length > 0) {
+    if (type != null) {
+      console.log(`Sources with the media type: ${type}:`);
+    } else {
+      console.log(`All media sources:`);
+    }
+  } else {
+    if (type != null) {
+      console.log(`No sources with the media type: ${type}!`);
+    } else {
+      console.log(`No media sources!`);
+    }
+  }
 }
 
 async function editSource(name) {
@@ -196,13 +224,13 @@ async function editSource(name) {
   }
 
   var cron = getTiming();
-  db.updateCronFormat(source._id, cron);
+  await db.updateCronFormat(source._id, cron);
   db.close();
 }
 
-function deleteSource(name) {
+async function deleteSource(name) {
   if (name == null) {
-    var values = db.getSourcesArray();
+    var values = await db.getSourcesArray();
 
     var names = [];
     values.forEach((item) => {
@@ -217,13 +245,13 @@ function deleteSource(name) {
     if (selectedSourceIndex == -1) db.close();
 
     if (confirmAction(`delete media source ${names[selectedSourceIndex]}`)) {
-      db.deleteSource(names[selectedSourceIndex]);
+      await db.deleteSource(names[selectedSourceIndex]);
     } else {
       console.log("Media source was not deleted!");
     }
   } else {
     if (confirmAction(`delete media source ${name}`)) {
-      db.deleteSource(name);
+      await db.deleteSource(name);
     } else {
       console.log("Media source was not deleted!");
     }

@@ -10,6 +10,7 @@ const config = require("./config.json");
 var downloads = [];
 var sourcesWatch = null;
 var settingsWatch = null;
+var downloadArchivesDir = `${config.downloadDir}/.downloadArchives`;
 
 init();
 
@@ -28,8 +29,6 @@ async function init() {
   sources.forEach((source) => {
     if (source.cron != "N/A") {
       createCron(source, true);
-    } else {
-      oneTimeDownload(source);
     }
   });
 }
@@ -65,6 +64,9 @@ function oneTimeDownload(source) {
 async function createCron(source, onStart) {
   // Instantly start downloading the media source if the server is not starting up
   if (!onStart) {
+    if (!fs.existsSync(downloadArchivesDir)) {
+      fs.mkdirSync(downloadArchivesDir);
+    }
     var instantCmd = createYTDLCommand(
       source.url,
       source.name,
@@ -90,11 +92,13 @@ async function createCron(source, onStart) {
   }
 
   var timezone = await db.getSettingById("timezone");
-  console.log(timezone);
   var child = null;
   let task = cron.schedule(
     source.cron,
     () => {
+      if (!fs.existsSync(downloadArchivesDir)) {
+        fs.mkdirSync(downloadArchivesDir);
+      }
       var cmd = createYTDLCommand(source.url, source.name, source.metadata);
       child = spawn(cmd.command, cmd.args);
 
@@ -130,26 +134,36 @@ async function createCron(source, onStart) {
 
 function removeCron(key) {
   var _cron = downloads.find((item) => item.key === key);
-  _cron.child.kill("SIGINT");
-  if (_cron.task != null) _cron.task.destroy();
+  if (_cron) {
+    _cron.child.kill("SIGINT");
+    if (_cron.task != null) _cron.task.destroy();
 
-  // Remove the destroyed task from the downloads array
-  downloads = downloads.find((item) => item.key != key);
+    // Remove the destroyed task from the downloads array
+    downloads = downloads.find((item) => item.key != key);
+  }
 }
 
 function editCron(key, newSource) {
   removeCron(key);
-  createCron(newSource, false);
+  if (newSource.cron != "N/A") {
+    createCron(newSource, false);
+  } else {
+    oneTimeDownload(newSource);
+  }
 }
 
 function createYTDLCommand(url, name, metadata) {
+  if (!fs.existsSync(downloadArchivesDir)) {
+    fs.mkdirSync(downloadArchivesDir);
+  }
   var obj = {
-    command: "youtube-dl",
+    command: "yt-dlp",
     args: [
       `${url}`,
-      "-v",
+      "--compat-options",
+      "youtube-dl",
       "--download-archive",
-      `${config.downloadDir}/${name}/downloaded.txt`,
+      `${downloadArchivesDir}/${name}-downloaded.txt`,
       "-f",
       "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
       "--output",
@@ -180,7 +194,11 @@ function createYTDLCommand(url, name, metadata) {
 function onSourcesChange(change) {
   console.log(change);
   if (change.operationType === "insert") {
-    createCron(change.fullDocument, false);
+    if (change.fullDocument.cron != "N/A") {
+      createCron(change.fullDocument, false);
+    } else {
+      oneTimeDownload(change.fullDocument);
+    }
   } else if (change.operationType === "replace") {
     editCron(change.documentKey._id, change.fullDocument);
   } else if (change.operationType === "delete") {
@@ -196,7 +214,7 @@ function onSettingsChange(change) {
 
 function changeGlobalTimezone() {
   var _downloads = downloads;
-  _downloads.forEach((download) => {
+  _downloads.forEach(async (download) => {
     // Kill spawned command
     download.child.kill("SIGINT");
     // Remove cron
@@ -206,6 +224,9 @@ function changeGlobalTimezone() {
     downloads = downloads.find((item) => item.key != download.key);
 
     // Add a new cron with the new timezone
-    createCron(db.getSourceById(download.key), true);
+    let source = await db.getSourceById(download.key);
+    if (source.cron != "N/A") {
+      createCron(source, true);
+    }
   });
 }
