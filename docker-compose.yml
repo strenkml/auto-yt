@@ -15,22 +15,22 @@ services:
     volumes:
       - mongoData:/bitnami/mongodb:rw
   server:
-    build: server/.
+    image: strenkml/auto-yt:server
     depends_on:
       - mongo
     volumes:
-      - /home/strenkml/AutoYT/downloads:/downloads
-      - /home/strenkml/AutoYT/config:/config
+      - LOCAL_DOWNLOAD_LOCATION:/downloads
+      - LOCAL_CONFIG_LOCATION:/config
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass
       ME_CONFIG_MONGODB_URL: mongodb://root:pass@mongo:27017/
   cli:
-    build: cli/.
+    image: strenkml/auto-yt:cli
     depends_on:
       - mongo
     volumes:
-      - /home/strenkml/AutoYT/config:/config
+      - LOCAL_CONFIG_LOCATION:/config
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass

@@ -12,5 +12,5 @@ docker-dev-clean:
 	docker-compose -f dev-docker-compose.yml -p dev-auto-yt build --no-cache && \
 	docker-compose -f dev-docker-compose.yml -p dev-auto-yt up -d --always-recreate-deps
 
-docker-prod:
+docker:
 	docker-compose -f docker-compose.yml -p auto-yt up --build -d
